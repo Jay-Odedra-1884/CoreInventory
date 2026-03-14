@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
-const validateLoginId = (v) => v.length >= 6 && v.length <= 12;
-const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const validateLoginId = (v) => v.trim().length >= 6 && v.trim().length <= 12;
+const validateEmail = (v) => v.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const validatePassword = (v) =>
-  v.length >= 8 && /[A-Z]/.test(v) && /[a-z]/.test(v) && /[^A-Za-z0-9]/.test(v);
+  v.length >= 8 && /[A-Z]/.test(v) && /[a-z]/.test(v) && /[^A-Za-z0-9]/.test(v.trim());
 
 function passwordStrength(v) {
   return [
@@ -156,24 +156,20 @@ function Tabs({ isSigned, setIsSigned }) {
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 function LoginForm({ onSwitch }) {
-  const [loginId, setLoginId] = useState("");
+  const [loginId,  setLoginId]  = useState("");
   const [password, setPassword] = useState("");
-  const [touched, setTouched] = useState({});
-  const [apiErr, setApiErr] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [touched,  setTouched]  = useState({});
+  const [apiErr,   setApiErr]   = useState("");
+  const [loading,  setLoading]  = useState(false);
 
-  const idErr =
-    touched.loginId && !validateLoginId(loginId)
-      ? "Must be 6–12 characters"
-      : "";
+  const idErr   = touched.loginId  && !validateLoginId(loginId) ? "Must be 6–12 characters" : "";
   const passErr = touched.password && !password ? "Password is required" : "";
 
   async function submit() {
     setTouched({ loginId: true, password: true });
     if (!validateLoginId(loginId) || !password) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800)); // remove this in prod
-    // TODO: const res = await fetch("/api/auth/login", { method:"POST", body: JSON.stringify({loginId, password}) })
+    await new Promise(r => setTimeout(r, 800));
     setLoading(false);
     setApiErr("Invalid Login ID or Password");
   }
@@ -185,13 +181,10 @@ function LoginForm({ onSwitch }) {
           placeholder="Enter your login ID"
           maxLength={12}
           value={loginId}
-          onChange={(e) => {
-            setLoginId(e.target.value);
-            setApiErr("");
-          }}
-          onBlur={() => setTouched((t) => ({ ...t, loginId: true }))}
+          onChange={(e) => setLoginId(e.target.value.trim())}
+          onBlur={() => setTouched(t => ({ ...t, loginId: true }))}
           error={idErr}
-          success={!idErr && touched.loginId && loginId}
+          success={!idErr && touched.loginId && validateLoginId(loginId)}
         />
       </Field>
 
@@ -200,13 +193,10 @@ function LoginForm({ onSwitch }) {
           type="password"
           placeholder="Enter your password"
           value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setApiErr("");
-          }}
-          onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+          onChange={(e) => setPassword(e.target.value.trim())}
+          onBlur={() => setTouched(t => ({ ...t, password: true }))}
           error={passErr || apiErr}
-          success={!passErr && !apiErr && touched.password && password}
+          success={!passErr && !apiErr && touched.password && !!password}
         />
       </Field>
 
@@ -227,38 +217,18 @@ function LoginForm({ onSwitch }) {
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
-            <svg
-              className="animate-spin h-4 w-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v8z"
-              />
+            <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
             </svg>
             Signing in…
           </span>
-        ) : (
-          "Sign In"
-        )}
+        ) : "Sign In"}
       </button>
 
       <p className="text-center text-xs text-gray-400 mt-6">
         No account?{" "}
-        <span
-          onClick={onSwitch}
-          className="text-indigo-600 font-semibold cursor-pointer hover:text-indigo-800 transition-colors"
-        >
+        <span onClick={onSwitch} className="text-indigo-600 font-semibold cursor-pointer hover:text-indigo-800 transition-colors">
           Sign Up
         </span>
       </p>
@@ -282,7 +252,7 @@ function SignupForm({ onSwitch }) {
       ? "Must be 6–12 characters"
       : "";
   const emailErr =
-    touched.email && !validateEmail(email) ? "Enter a valid email" : "";
+    touched.email && !validateEmail(email.trim()) ? "Enter a valid email" : "";
   const passErr =
     touched.password && !validatePassword(password)
       ? "Min 8 chars · A–Z · a–z · special char"
@@ -323,22 +293,23 @@ function SignupForm({ onSwitch }) {
           placeholder="6–12 characters, unique"
           maxLength={12}
           value={loginId}
-          onChange={(e) => setLoginId(e.target.value)}
+          onChange={(e) => setLoginId(e.target.value.trim())}
           onBlur={() => setTouched((t) => ({ ...t, loginId: true }))}
           error={idErr}
-          success={!idErr && touched.loginId && loginId}
+          success={!idErr && touched.loginId && validateLoginId(loginId)}
+
         />
       </Field>
 
       <Field label="Email" error={emailErr}>
         <Input
-          type="email"
+          type="text"
           placeholder="you@email.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value.trim())}
           onBlur={() => setTouched((t) => ({ ...t, email: true }))}
           error={emailErr}
-          success={!emailErr && touched.email && email}
+          success={!emailErr && touched.email && validateEmail(email)}
         />
       </Field>
 
@@ -347,7 +318,7 @@ function SignupForm({ onSwitch }) {
           type="password"
           placeholder="Min 8 chars, A–Z, a–z, special"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value.trim())}
           onBlur={() => setTouched((t) => ({ ...t, password: true }))}
           error={passErr}
           success={s === 4}
@@ -376,7 +347,7 @@ function SignupForm({ onSwitch }) {
           type="password"
           placeholder="Confirm your password"
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={(e) => setConfirm(e.target.value.trim())}
           onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
           error={confirmErr}
           success={
