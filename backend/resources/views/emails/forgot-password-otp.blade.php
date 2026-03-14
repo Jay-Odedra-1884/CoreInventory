@@ -45,7 +45,7 @@
                             <hr style="margin:30px 0">
 
                             <p style="color:#aaa;font-size:12px;">
-                                © {{ date('Y') }} Your App. All rights reserved.
+                                © {{ date('Y') }} CoreInventory. All rights reserved.
                             </p>
 
                         </td>

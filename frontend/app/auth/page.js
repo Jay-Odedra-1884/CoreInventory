@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const validateLoginId = (v) => v.length >= 6 && v.length <= 12;
 const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const validatePassword = (v) =>
   v.length >= 8 && /[A-Z]/.test(v) && /[a-z]/.test(v) && /[^A-Za-z0-9]/.test(v);
+const validateName = (v) => v.trim().length >= 2;
+
 
 function passwordStrength(v) {
   return [
@@ -40,10 +44,10 @@ function Input({ error, success, className = "", ...props }) {
   const ring = error
     ? "border-red-300 bg-red-50/40 focus:border-red-400 focus:ring-red-100"
     : success
-    ? "border-emerald-300 bg-emerald-50/30 focus:border-emerald-400 focus:ring-emerald-100"
-    : focused
-    ? "border-indigo-300 bg-white focus:border-indigo-400 focus:ring-indigo-100"
-    : "border-gray-200 bg-gray-50/60 hover:border-gray-300 hover:bg-white";
+      ? "border-emerald-300 bg-emerald-50/30 focus:border-emerald-400 focus:ring-emerald-100"
+      : focused
+        ? "border-indigo-300 bg-white focus:border-indigo-400 focus:ring-indigo-100"
+        : "border-gray-200 bg-gray-50/60 hover:border-gray-300 hover:bg-white";
 
   return (
     <input
@@ -130,6 +134,7 @@ function Logo() {
   );
 }
 
+
 // ─── Tab switcher ─────────────────────────────────────────────────────────────
 function Tabs({ isSigned, setIsSigned }) {
   return (
@@ -141,11 +146,10 @@ function Tabs({ isSigned, setIsSigned }) {
         <button
           key={label}
           onClick={() => setIsSigned(val)}
-          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
-            isSigned === val
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-400 hover:text-gray-600"
-          }`}
+          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${isSigned === val
+            ? "bg-white text-gray-900 shadow-sm"
+            : "text-gray-400 hover:text-gray-600"
+            }`}
         >
           {label}
         </button>
@@ -168,14 +172,40 @@ function LoginForm({ onSwitch }) {
       : "";
   const passErr = touched.password && !password ? "Password is required" : "";
 
+  const router = useRouter();
+
   async function submit() {
     setTouched({ loginId: true, password: true });
     if (!validateLoginId(loginId) || !password) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800)); // remove this in prod
-    // TODO: const res = await fetch("/api/auth/login", { method:"POST", body: JSON.stringify({loginId, password}) })
-    setLoading(false);
-    setApiErr("Invalid Login ID or Password");
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({ login_id: loginId, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        console.log("Login successful:", data);
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          router.push("/dashboard");
+        }
+      } else {
+        setApiErr(data.message || "Invalid Login ID or Password");
+      }
+    } catch (err) {
+      setApiErr("Unable to connect to the server. Please try again later.");
+      console.error("Login Error:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -268,74 +298,141 @@ function LoginForm({ onSwitch }) {
 
 // ─── Signup ───────────────────────────────────────────────────────────────────
 function SignupForm({ onSwitch }) {
-  const [loginId, setLoginId] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [touched, setTouched] = useState({});
+  const [apiErr, setApiErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [registeredUser, setRegisteredUser] = useState(null);
 
   const s = passwordStrength(password);
-  const idErr =
-    touched.loginId && !validateLoginId(loginId)
-      ? "Must be 6–12 characters"
-      : "";
+  const nameErr = touched.name && !validateName(name) ? "Name is required" : "";
   const emailErr =
     touched.email && !validateEmail(email) ? "Enter a valid email" : "";
   const passErr =
     touched.password && !validatePassword(password)
       ? "Min 8 chars · A–Z · a–z · special char"
       : "";
-  const confirmErr =
-    touched.confirm && confirm !== password ? "Passwords don't match" : "";
 
   async function submit() {
-    setTouched({ loginId: true, email: true, password: true, confirm: true });
-    if (
-      !validateLoginId(loginId) ||
-      !validateEmail(email) ||
-      !validatePassword(password) ||
-      confirm !== password
-    )
+    setTouched({ name: true, email: true, password: true });
+    if (!validateName(name) || !validateEmail(email) || !validatePassword(password))
       return;
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800)); // remove in prod
-    // TODO: await fetch("/api/auth/signup", { method:"POST", body: JSON.stringify({loginId, email, password}) })
-    setLoading(false);
-    setDone(true);
-    setTimeout(() => {
-      setDone(false);
-      onSwitch();
-    }, 2000);
+    setApiErr("");
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setRegisteredUser(data.data);
+      } else {
+        // Handle Laravel validation errors
+        if (data.message && typeof data.message === "object") {
+          const firstErr = Object.values(data.message)[0][0];
+          setApiErr(firstErr);
+        } else {
+          setApiErr(data.message || "Registration failed. Please try again.");
+        }
+      }
+    } catch (err) {
+      setApiErr("Unable to connect to the server. Please check your connection.");
+      console.error("Signup Error:", err);
+    } finally {
+      setLoading(false);
+    }
   }
+
+  const [copied, setCopied] = useState(false);
+  const copyToClipboard = () => {
+    if (registeredUser?.login_id) {
+      navigator.clipboard.writeText(registeredUser.login_id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <>
-      {done && (
-        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-xl px-4 py-3 mb-4 font-medium">
-          <span className="text-base">✓</span> Account created! Redirecting…
+      {registeredUser && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-5 py-5 mb-6 transition-all duration-300 shadow-sm">
+          <div className="flex items-center gap-2 mb-3 font-bold text-sm">
+            <span className="bg-emerald-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">✓</span>
+            Account Created!
+          </div>
+
+          <p className="text-[11px] mb-2 text-emerald-600 font-medium">Your uniquely assigned Login ID:</p>
+
+          <div className="relative group">
+            <div className="bg-white border border-emerald-100 rounded-lg py-3 text-center text-xl font-mono font-bold tracking-[0.2em] text-emerald-600 shadow-inner">
+              {registeredUser.login_id}
+            </div>
+            <button
+              onClick={copyToClipboard}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-emerald-50 rounded-md transition-colors text-emerald-400 hover:text-emerald-600"
+              title="Copy to clipboard"
+            >
+              {copied ? (
+                <span className="text-[10px] font-bold">Copied!</span>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              )}
+            </button>
+          </div>
+
+          <p className="text-[10px] mt-4 text-emerald-600/60 leading-relaxed italic">
+            Please save this ID. You will need it to sign in to your account.
+          </p>
+
+          <button
+            onClick={onSwitch}
+            className="w-full mt-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+          >
+            Continue to Sign In
+          </button>
         </div>
       )}
 
-      <Field label="Login ID" error={idErr}>
+      {apiErr && !registeredUser && (
+        <div className="bg-red-50 border border-red-100 text-red-600 text-[11px] rounded-xl px-4 py-3 mb-4 font-medium flex items-center gap-2">
+          <span>⚠</span> {apiErr}
+        </div>
+      )}
+
+      <Field label="Full Name" error={nameErr}>
         <Input
-          placeholder="6–12 characters, unique"
-          maxLength={12}
-          value={loginId}
-          onChange={(e) => setLoginId(e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, loginId: true }))}
-          error={idErr}
-          success={!idErr && touched.loginId && loginId}
+          placeholder="Enter your name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setApiErr("");
+          }}
+          onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+          error={nameErr}
+          success={!nameErr && touched.name && name}
         />
       </Field>
 
-      <Field label="Email" error={emailErr}>
+      <Field label="Email Address" error={emailErr}>
         <Input
           type="email"
           placeholder="you@email.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setApiErr("");
+          }}
           onBlur={() => setTouched((t) => ({ ...t, email: true }))}
           error={emailErr}
           success={!emailErr && touched.email && email}
@@ -347,7 +444,10 @@ function SignupForm({ onSwitch }) {
           type="password"
           placeholder="Min 8 chars, A–Z, a–z, special"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setApiErr("");
+          }}
           onBlur={() => setTouched((t) => ({ ...t, password: true }))}
           error={passErr}
           success={s === 4}
@@ -357,9 +457,8 @@ function SignupForm({ onSwitch }) {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className={`flex-1 h-1 rounded-full transition-all duration-300 ${
-                  i <= s ? strengthBar[s] : "bg-gray-100"
-                }`}
+                className={`flex-1 h-1 rounded-full transition-all duration-300 ${i <= s ? strengthBar[s] : "bg-gray-100"
+                  }`}
               />
             ))}
             <span
@@ -371,24 +470,10 @@ function SignupForm({ onSwitch }) {
         )}
       </Field>
 
-      <Field label="Re-enter Password" error={confirmErr}>
-        <Input
-          type="password"
-          placeholder="Confirm your password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
-          error={confirmErr}
-          success={
-            !confirmErr && touched.confirm && confirm === password && !!confirm
-          }
-        />
-      </Field>
-
       <button
         onClick={submit}
-        disabled={loading}
-        className="w-full py-3 rounded-xl text-sm font-semibold text-white mt-1
+        disabled={loading || registeredUser}
+        className="w-full py-3 rounded-xl text-sm font-semibold text-white mt-4
           bg-gradient-to-r from-indigo-600 to-violet-600
           hover:from-indigo-500 hover:to-violet-500
           active:scale-[0.98] transition-all duration-200
