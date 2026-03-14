@@ -32,15 +32,15 @@ export const AppProvider = ({ children }) => {
   const notifyInventoryChange = () => setInventoryVersion((v) => v + 1);
 
   // ── Read token from localStorage on mount ─────────────────────────────────
- useEffect(() => {
-   const token = localStorage.getItem("authToken"); 
-   if (token) {
-     setAuthToken(token);
-     validateToken(token);
-   } else {
-     setAuthLoading(false); 
-   }
- }, []);
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      setAuthToken(token);
+      validateToken(token);
+    } else {
+      setAuthLoading(false);
+    }
+  }, []);
 
   // ── Validate token with Laravel /me ───────────────────────────────────────
   const validateToken = async (token) => {
@@ -68,7 +68,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // ── Login ─────────────────────────────────────────────────────────────────
-  const login = async (email, password) => {
+  const login = async (loginId, password) => {
     try {
       const res = await fetch(`${API_URL}/login`, {
         method: "POST",
@@ -76,7 +76,7 @@ export const AppProvider = ({ children }) => {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ login_id: loginId, password }),
       });
 
       const data = await res.json();
@@ -115,7 +115,11 @@ export const AppProvider = ({ children }) => {
 
       const data = await res.json();
       if (data.success) {
-        await login(email, password);
+        localStorage.setItem("authToken", data.token);
+        setAuthToken(data.token);
+        setUser(data.data ?? null);
+        toast.success("Account created successfully!");
+        router.push("/dashboard");
       } else {
         toast.error(getErrorMessage(data.message));
       }

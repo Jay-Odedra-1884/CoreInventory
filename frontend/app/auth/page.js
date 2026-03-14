@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+<<<<<<< HEAD
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
+=======
+import { useApp } from "@/context/AppContext";
+>>>>>>> 6779a3df426c10bd3ee2d079c182e4597aacf096
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 const validateLoginId = (v) => v.length >= 6 && v.length <= 12;
@@ -12,7 +16,6 @@ const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const validatePassword = (v) =>
   v.length >= 8 && /[A-Z]/.test(v) && /[a-z]/.test(v) && /[^A-Za-z0-9]/.test(v);
 const validateName = (v) => v.trim().length >= 2;
-
 
 function passwordStrength(v) {
   return [
@@ -136,7 +139,6 @@ function Logo() {
   );
 }
 
-
 // ─── Tab switcher ─────────────────────────────────────────────────────────────
 function Tabs({ isSigned, setIsSigned }) {
   return (
@@ -148,10 +150,11 @@ function Tabs({ isSigned, setIsSigned }) {
         <button
           key={label}
           onClick={() => setIsSigned(val)}
-          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${isSigned === val
-            ? "bg-white text-gray-900 shadow-sm"
-            : "text-gray-400 hover:text-gray-600"
-            }`}
+          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
+            isSigned === val
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-400 hover:text-gray-600"
+          }`}
         >
           {label}
         </button>
@@ -174,12 +177,13 @@ function LoginForm({ onSwitch }) {
       : "";
   const passErr = touched.password && !password ? "Password is required" : "";
 
-  const router = useRouter();
+  const { login } = useApp();
 
   async function submit() {
     setTouched({ loginId: true, password: true });
     if (!validateLoginId(loginId) || !password) return;
     setLoading(true);
+    setApiErr("");
 
     try {
 
@@ -312,7 +316,6 @@ function SignupForm({ onSwitch }) {
   const [touched, setTouched] = useState({});
   const [apiErr, setApiErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [registeredUser, setRegisteredUser] = useState(null);
 
   const s = passwordStrength(password);
   const nameErr = touched.name && !validateName(name) ? "Name is required" : "";
@@ -323,96 +326,36 @@ function SignupForm({ onSwitch }) {
       ? "Min 8 chars · A–Z · a–z · special char"
       : "";
 
+  const { register } = useApp();
+
   async function submit() {
     setTouched({ name: true, email: true, password: true });
-    if (!validateName(name) || !validateEmail(email) || !validatePassword(password))
+    if (
+      !validateName(name) ||
+      !validateEmail(email) ||
+      !validatePassword(password)
+    )
       return;
 
     setLoading(true);
     setApiErr("");
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setRegisteredUser(data.data);
-      } else {
-        // Handle Laravel validation errors
-        if (data.message && typeof data.message === "object") {
-          const firstErr = Object.values(data.message)[0][0];
-          setApiErr(firstErr);
-        } else {
-          setApiErr(data.message || "Registration failed. Please try again.");
-        }
-      }
+      await register(name, email, "", password, password);
     } catch (err) {
-      setApiErr("Unable to connect to the server. Please check your connection.");
+      setApiErr(
+        "Unable to connect to the server. Please check your connection.",
+      );
       console.error("Signup Error:", err);
     } finally {
       setLoading(false);
     }
   }
 
-  const [copied, setCopied] = useState(false);
-  const copyToClipboard = () => {
-    if (registeredUser?.login_id) {
-      navigator.clipboard.writeText(registeredUser.login_id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   return (
     <>
-      {registeredUser && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-5 py-5 mb-6 transition-all duration-300 shadow-sm">
-          <div className="flex items-center gap-2 mb-3 font-bold text-sm">
-            <span className="bg-emerald-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">✓</span>
-            Account Created!
-          </div>
 
-          <p className="text-[11px] mb-2 text-emerald-600 font-medium">Your uniquely assigned Login ID:</p>
-
-          <div className="relative group">
-            <div className="bg-white border border-emerald-100 rounded-lg py-3 text-center text-xl font-mono font-bold tracking-[0.2em] text-emerald-600 shadow-inner">
-              {registeredUser.login_id}
-            </div>
-            <button
-              onClick={copyToClipboard}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-emerald-50 rounded-md transition-colors text-emerald-400 hover:text-emerald-600"
-              title="Copy to clipboard"
-            >
-              {copied ? (
-                <span className="text-[10px] font-bold">Copied!</span>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              )}
-            </button>
-          </div>
-
-          <p className="text-[10px] mt-4 text-emerald-600/60 leading-relaxed italic">
-            Please save this ID. You will need it to sign in to your account.
-          </p>
-
-          <button
-            onClick={onSwitch}
-            className="w-full mt-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
-          >
-            Continue to Sign In
-          </button>
-        </div>
-      )}
-
-      {apiErr && !registeredUser && (
+      {apiErr && (
         <div className="bg-red-50 border border-red-100 text-red-600 text-[11px] rounded-xl px-4 py-3 mb-4 font-medium flex items-center gap-2">
           <span>⚠</span> {apiErr}
         </div>
@@ -465,8 +408,9 @@ function SignupForm({ onSwitch }) {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className={`flex-1 h-1 rounded-full transition-all duration-300 ${i <= s ? strengthBar[s] : "bg-gray-100"
-                  }`}
+                className={`flex-1 h-1 rounded-full transition-all duration-300 ${
+                  i <= s ? strengthBar[s] : "bg-gray-100"
+                }`}
               />
             ))}
             <span
@@ -480,7 +424,7 @@ function SignupForm({ onSwitch }) {
 
       <button
         onClick={submit}
-        disabled={loading || registeredUser}
+        disabled={loading}
         className="w-full py-3 rounded-xl text-sm font-semibold text-white mt-4
           bg-gradient-to-r from-indigo-600 to-violet-600
           hover:from-indigo-500 hover:to-violet-500

@@ -42,14 +42,20 @@ function Graph({ receipts = 545, deliveries = 0, net = -545 }) {
       <div className="flex flex-1 gap-4 min-h-[220px] relative mt-2">
         {/* Y-Axis Labels */}
         <div className="flex flex-col justify-between text-[9px] font-bold text-gray-300 text-right pb-8 shrink-0 w-8">
-          {[600, 450, 300, 150, 0].map(v => <span key={v}>{v}</span>)}
+          {[600, 450, 300, 150, 0].map((v) => (
+            <span key={v}>{v}</span>
+          ))}
         </div>
 
         {/* Chart Area */}
         <div className="relative flex-1 border-b border-gray-100 pb-8">
           {/* Grid Lines */}
-          {[75, 50, 25].map(p => (
-            <div key={p} className="absolute w-full border-t border-gray-50" style={{ bottom: `calc(${p}% + 32px)` }} />
+          {[75, 50, 25].map((p) => (
+            <div
+              key={p}
+              className="absolute w-full border-t border-gray-50"
+              style={{ bottom: `calc(${p}% + 32px)` }}
+            />
           ))}
 
           <div className="flex h-full items-end justify-center gap-12 px-4">
@@ -188,12 +194,15 @@ export default function DashboardPage() {
         {/* Row 2: Graph + Warehouse side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Warehouse />
-          <Graph receipts={data.receipts} deliveries={data.deliveries} net={data.net} />
+          <Graph
+            receipts={data.receipts}
+            deliveries={data.deliveries}
+            net={data.net}
+          />
         </div>
 
         {/* Row 3: Products full width */}
         <Products />
-
       </div>
     </div>
   );
