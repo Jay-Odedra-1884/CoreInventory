@@ -7,9 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
-use App\Jobs\SendWelcomeMailJob;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
@@ -46,6 +44,7 @@ class UserController extends Controller
         $data['is_active'] = true;
 
         $user = User::create($data);
+         $token = $user->createToken('MyToken')->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -54,7 +53,8 @@ class UserController extends Controller
                 'login_id' => $user->login_id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role
+                'role' => $user->role,
+                'token' => $token,
             ]
         ], 201);
     }
