@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\UserController;
+use App\Http\Controllers\WareHouse\LocationController;
+use App\Http\Controllers\WareHouse\WareHouseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,3 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
     Route::post('users', [UserController::class, 'store']); // Admin adds manager/staff
 });
+
+//warehouse routes
+Route::resource('locations', LocationController::class);
+Route::resource('warehouses', WareHouseController::class);
+//get the all locations by warehouse code
+Route::get('locations/warehouse/{warehouse_code}', [LocationController::class, 'getLocationsByWarehouseCode']);
