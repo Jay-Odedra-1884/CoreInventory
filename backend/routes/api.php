@@ -24,7 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('users', [UserController::class, 'store']); // Admin adds manager/staff
     Route::apiResource('products', ProductController::class);
     Route::apiResource('product-categories', ProductCategoryController::class);
-    
+
     //warehouse routes
     Route::resource('locations', LocationController::class);
     Route::resource('warehouses', WareHouseController::class);

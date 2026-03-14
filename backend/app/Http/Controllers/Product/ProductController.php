@@ -47,7 +47,7 @@ class ProductController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'category_id' => 'required|exists:product_category,id',
-                'unit' => 'required|numeric|min:0',
+                'unit' => 'required|in:kg,piece,liter,meter',
                 'price' => 'required|numeric|min:0',
                 'cost' => 'required|numeric|min:0',
             ]);
@@ -145,7 +145,7 @@ class ProductController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|string|max:255',
                 'category_id' => 'sometimes|exists:product_category,id',
-                'unit' => 'sometimes|numeric|min:0',
+                'unit' => 'sometimes|in:kg,piece,liter,meter',
                 'price' => 'sometimes|numeric|min:0',
                 'cost' => 'sometimes|numeric|min:0',
             ]);
