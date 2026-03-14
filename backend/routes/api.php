@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\Product\ProductCategoryController;
+use App\Http\Controllers\Product\StockController;
 use App\Http\Controllers\WareHouse\LocationController;
 use App\Http\Controllers\WareHouse\WareHouseController;
 use Illuminate\Http\Request;
@@ -13,9 +14,10 @@ Route::post('register', [UserController::class, 'register']);
 Route::post('login', [UserController::class, 'login'])->name('login');
 Route::post('logout', [UserController::class, 'logout']);
 
-Route::post('forgot-password', [UserController::class, 'forgotPassword']);
-Route::post('verify-otp', [UserController::class, 'verifyOtp']);
-Route::post('reset-password', [UserController::class, 'resetPassword']);
+// Forgot password flow
+Route::post('forgot-password/send-otp', [UserController::class, 'forgotPassword']);
+Route::post('forgot-password/verify-otp', [UserController::class, 'verifyOtp']);
+Route::post('forgot-password/reset', [UserController::class, 'resetPassword']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
@@ -28,8 +30,13 @@ Route::middleware('auth:sanctum')->group(function () {
     //warehouse routes
     Route::resource('locations', LocationController::class);
     Route::resource('warehouses', WareHouseController::class);
+    
     //get the all locations by warehouse code
     Route::get('locations/warehouse/{warehouse_code}', [LocationController::class, 'getLocationsByWarehouseCode']);
+    
+    //stock routes
+    Route::apiResource('stocks', StockController::class);
+    Route::get('stocks/warehouse/{warehouse_code}', [StockController::class, 'getStockByWarehouse']);
 });
 
 

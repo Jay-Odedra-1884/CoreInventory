@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
 
@@ -182,7 +183,6 @@ function LoginForm({ onSwitch }) {
 
     try {
 
-      apiFetch("/dashboard",{})
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
         method: "POST",
         headers: {
@@ -197,8 +197,13 @@ function LoginForm({ onSwitch }) {
       if (res.ok && data.success) {
         console.log("Login successful:", data);
         if (data.token) {
-         localStorage.setItem("authToken", data.token);
-          router.push("/dashboard");
+          localStorage.setItem("authToken", data.token);
+          // Small delay to ensure token is saved
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 300);
+        } else {
+          setApiErr("No token received from server");
         }
       } else {
         setApiErr(data.message || "Invalid Login ID or Password");
@@ -244,9 +249,9 @@ function LoginForm({ onSwitch }) {
       </Field>
 
       <div className="flex justify-end mb-5">
-        <span className="text-xs text-indigo-500 hover:text-indigo-700 cursor-pointer font-medium transition-colors">
+        <Link href="/auth/forgot-password" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors">
           Forgot password?
-        </span>
+        </Link>
       </div>
 
       <button

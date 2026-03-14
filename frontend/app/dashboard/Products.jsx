@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
+import ProductCategoryManager from "@/components/Product/ProductCategoryManager";
 
 const API = "http://localhost:8000/api";
 
-const inputCls = (err) => `w-full border rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-300 outline-none transition-all bg-gray-50/50 ${
-  err ? "border-[#f03e3e] focus:border-[#f03e3e]" : "border-gray-200 focus:border-[#37b24d] focus:ring-2 focus:ring-[#37b24d]/10"
-}`;
+const inputCls = (err) => `w-full border rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-300 outline-none transition-all bg-gray-50/50 ${err ? "border-[#f03e3e] focus:border-[#f03e3e]" : "border-gray-200 focus:border-[#37b24d] focus:ring-2 focus:ring-[#37b24d]/10"
+  }`;
 
 function Modal({ open, onClose, title, children }) {
   if (!open) return null;
@@ -36,38 +37,72 @@ function FormField({ label, error, required, children }) {
 }
 
 export default function Products({ filters = {} }) {
-  const [products,    setProducts]    = useState([]);
-  const [showModal,   setShowModal]   = useState(false);
-  const [editItem,    setEditItem]    = useState(null);
-  const [saving,      setSaving]      = useState(false);
-  const [errs,        setErrs]        = useState({});
+  const [products, setProducts] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [errs, setErrs] = useState({});
   const [stockFilter, setStockFilter] = useState("All");
-  const [form,        setForm]        = useState({ name: "", sku: "", category: "", qty: "", uom: "" });
+  const [form, setForm] = useState({ name: "", category_id: "", unit: "", price: "", cost: "" });
+  const [categories, setCategories] = useState([]);
 
-  const load = () => {
-    fetch(`${API}/products`).then(r => r.json()).then(setProducts)
-      .catch(() => setProducts([
-        { id: 1, sku: "DESK001", name: "Desk",        category: "Furniture",    qty: 24, uom: "Units" },
-        { id: 2, sku: "CHAIR02", name: "Chair",       category: "Furniture",    qty: 6,  uom: "Units" },
-        { id: 3, sku: "STROD03", name: "Steel Rods",  category: "Raw Material", qty: 77, uom: "Kg"    },
-        { id: 4, sku: "LAMP004", name: "Desk Lamp",   category: "Electronics",  qty: 3,  uom: "Units" },
-        { id: 5, sku: "CABLE05", name: "Power Cable", category: "Electronics",  qty: 0,  uom: "Pcs"   },
-      ]));
+  const load = async () => {
+    try {
+      const response = await apiFetch("/products");
+      if (response?.success) {
+        setProducts(response.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load products:", err);
+      setProducts([]);
+    }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    loadCategories();
+    load(); 
+  }, []);
 
-  function openAdd()   { setForm({ name: "", sku: "", category: "", qty: "", uom: "" }); setEditItem(null); setErrs({}); setShowModal(true); }
-  function openEdit(p) { setForm({ name: p.name, sku: p.sku, category: p.category, qty: String(p.qty), uom: p.uom }); setEditItem(p); setErrs({}); setShowModal(true); }
-  function closeModal(){ setShowModal(false); setEditItem(null); setErrs({}); }
+  const loadCategories = async () => {
+    try {
+      const response = await apiFetch("/product-categories");
+      if (response?.success) {
+        setCategories(response.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+    }
+  };
+
+  function openAdd() { 
+    setForm({ name: "", category_id: "", unit: "", price: "", cost: "" }); 
+    setEditItem(null); 
+    setErrs({}); 
+    setShowModal(true); 
+  }
+  
+  function openEdit(p) { 
+    setForm({ 
+      name: p.name, 
+      category_id: p.category_id, 
+      unit: p.unit, 
+      price: String(p.price), 
+      cost: String(p.cost) 
+    }); 
+    setEditItem(p); 
+    setErrs({}); 
+    setShowModal(true); 
+  }
+  
+  function closeModal() { setShowModal(false); setEditItem(null); setErrs({}); }
 
   function validate() {
     const e = {};
-    if (!form.name.trim())                          e.name     = "Product name is required";
-    if (!form.sku.trim())                           e.sku      = "SKU is required";
-    if (!form.category.trim())                      e.category = "Category is required";
-    if (form.qty === "" || isNaN(Number(form.qty))) e.qty      = "Valid quantity is required";
-    if (!form.uom.trim())                           e.uom      = "Unit of measure is required";
+    if (!form.name.trim()) e.name = "Product name is required";
+    if (!form.category_id) e.category_id = "Category is required";
+    if (!form.unit) e.unit = "Unit of measure is required";
+    if (form.price === "" || isNaN(Number(form.price))) e.price = "Valid price is required";
+    if (form.cost === "" || isNaN(Number(form.cost))) e.cost = "Valid cost is required";
     setErrs(e);
     return Object.keys(e).length === 0;
   }
@@ -75,16 +110,23 @@ export default function Products({ filters = {} }) {
   async function save() {
     if (!validate()) return;
     setSaving(true);
-    const payload = { ...form, qty: Number(form.qty) };
+    const payload = { 
+      name: form.name, 
+      category_id: parseInt(form.category_id),
+      unit: form.unit,
+      price: Number(form.price),
+      cost: Number(form.cost)
+    };
+    
     try {
-      const url    = editItem ? `${API}/products/${editItem.id}` : `${API}/products`;
+      const url = editItem ? `/products/${editItem.id}` : `/products`;
       const method = editItem ? "PUT" : "POST";
-      const res    = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!res.ok) throw new Error();
-      load();
-    } catch {
-      if (editItem) setProducts(ps => ps.map(p => p.id === editItem.id ? { ...p, ...payload } : p));
-      else          setProducts(ps => [...ps, { id: Date.now(), ...payload }]);
+      const res = await apiFetch(url, { method, body: JSON.stringify(payload) });
+      if (res?.success) {
+        load();
+      }
+    } catch (err) {
+      console.error("Save failed:", err);
     }
     setSaving(false);
     closeModal();
@@ -92,41 +134,51 @@ export default function Products({ filters = {} }) {
 
   async function del(id) {
     if (!confirm("Delete this product?")) return;
-    try { await fetch(`${API}/products/${id}`, { method: "DELETE" }); } catch {}
-    setProducts(ps => ps.filter(p => p.id !== id));
+    try { 
+      await apiFetch(`/products/${id}`, { method: "DELETE" });
+      load();
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
   }
 
-  const stockTag = qty =>
-    qty === 0 ? { label: "Out of Stock", cls: "bg-[#fff5f5] text-[#f03e3e]" }
-    : qty <= 5 ? { label: "Low Stock",   cls: "bg-[#fff4e6] text-[#f59f00]" }
-    :            { label: "In Stock",    cls: "bg-[#ebfbee] text-[#37b24d]" };
+  const getCategoryName = (categoryId) => {
+    const cat = categories.find(c => c.id === categoryId);
+    return cat?.name || "Unknown";
+  };
 
   const filtered = products
-    .filter(p => filters.category && filters.category !== "All" ? p.category === filters.category : true)
-    .filter(p => stockFilter === "Low" ? p.qty > 0 && p.qty <= 5 : stockFilter === "Out" ? p.qty === 0 : true);
+    .filter(p => filters.category && filters.category !== "All" ? p.category?.name === filters.category : true)
 
   return (
     <>
-      <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-50">
-        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      {/* Product Categories Manager */}
+      <ProductCategoryManager onCategoriesChanged={(cats) => setCategories(cats)} />
+
+      {/* Products Table */}
+      <div className="rounded-2xl bg-white p-8 shadow-md border border-gray-100 mt-8">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-[15px] font-semibold text-gray-900">All Products</h3>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="inline-block w-1 h-6 bg-[#37b24d] rounded"></span>
+              All Products
+            </h3>
             {filters.category && filters.category !== "All" && (
-              <p className="text-[11px] text-[#37b24d] mt-0.5">Category: {filters.category}</p>
+              <p className="text-sm text-[#37b24d] mt-1">Category: {filters.category}</p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <div className="flex items-center rounded-lg border border-gray-100 bg-[#f8f9fa] p-1 font-medium text-gray-500">
-              {["All","Low","Out"].map(f => (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center rounded-lg border border-gray-200 bg-gray-50 p-1 font-medium text-gray-600">
+              {["All", "Low", "Out"].map(f => (
                 <button key={f} onClick={() => setStockFilter(f)}
-                  className={`px-3 py-1 rounded transition-all ${stockFilter === f ? "bg-white text-gray-700 shadow-sm font-semibold" : "hover:text-gray-700"}`}>
+                  className={`px-4 py-2 rounded-md transition-all ${stockFilter === f ? "bg-white text-gray-900 shadow-sm font-semibold border border-gray-200" : "hover:text-gray-900"}`}>
                   {f === "All" ? "All" : f === "Low" ? "Low Stock" : "Out of Stock"}
                 </button>
               ))}
             </div>
             <button onClick={openAdd}
-              className="flex items-center gap-1 rounded bg-[#37b24d] px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600 transition-colors">
-              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              className="flex items-center gap-2 rounded-lg bg-[#37b24d] px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 shadow-md transition-all hover:shadow-lg">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
               </svg>
               Add Product
@@ -134,46 +186,39 @@ export default function Products({ filters = {} }) {
           </div>
         </div>
 
-        <div className="flex gap-3 mb-5 text-[11px] font-bold">
-          <span className="rounded-full bg-[#ebfbee] px-3 py-1.5 text-[#37b24d]">{products.filter(p => p.qty > 5).length} In Stock</span>
-          <span className="rounded-full bg-[#fff4e6] px-3 py-1.5 text-[#f59f00]">{products.filter(p => p.qty > 0 && p.qty <= 5).length} Low Stock</span>
-          <span className="rounded-full bg-[#fff5f5] px-3 py-1.5 text-[#f03e3e]">{products.filter(p => p.qty === 0).length} Out of Stock</span>
+        <div className="flex gap-3 mb-6 text-sm font-bold">
+          <span className="rounded-full bg-[#ebfbee] px-4 py-2 text-[#37b24d]">{products.length} Total Products</span>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="border-t border-gray-50 py-10 text-center text-sm text-gray-400">No products found.</div>
+          <div className="border-t border-gray-100 py-12 text-center text-sm text-gray-400">No products found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  <th className="pb-3 text-left">SKU</th>
-                  <th className="pb-3 text-left">Name</th>
-                  <th className="pb-3 text-left">Category</th>
-                  <th className="pb-3 text-right">Qty</th>
-                  <th className="pb-3 text-left pl-4">UoM</th>
-                  <th className="pb-3 text-left">Status</th>
-                  <th className="pb-3 text-center">Actions</th>
+                <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="pb-4 text-left">SKU</th>
+                  <th className="pb-4 text-left">Name</th>
+                  <th className="pb-4 text-left">Category</th>
+                  <th className="pb-4 text-left">Unit</th>
+                  <th className="pb-4 text-right">Price</th>
+                  <th className="pb-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map(p => {
-                  const tag = stockTag(p.qty);
-                  return (
-                    <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="py-3 font-mono text-gray-400 text-xs">[{p.sku}]</td>
-                      <td className="py-3 font-medium text-gray-800">{p.name}</td>
-                      <td className="py-3 text-gray-500">{p.category}</td>
-                      <td className="py-3 text-right font-semibold text-gray-800">{p.qty}</td>
-                      <td className="py-3 pl-4 text-gray-400">{p.uom}</td>
-                      <td className="py-3"><span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${tag.cls}`}>{tag.label}</span></td>
-                      <td className="py-3 text-center space-x-3 text-xs font-semibold">
-                        <button onClick={() => openEdit(p)} className="text-blue-500 hover:text-blue-700 transition-colors">Edit</button>
-                        <button onClick={() => del(p.id)}   className="text-[#f03e3e] hover:text-red-700 transition-colors">Delete</button>
-                      </td>
-                    </tr>
-                  );
-                })}
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map(p => (
+                  <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="py-3 font-mono text-gray-500 text-xs">[{p.sku}]</td>
+                    <td className="py-3 font-medium text-gray-900">{p.name}</td>
+                    <td className="py-3 text-gray-600">{p.category?.name || "N/A"}</td>
+                    <td className="py-3 text-gray-600">{p.unit}</td>
+                    <td className="py-3 text-right font-semibold text-gray-900">₹{Number(p.price).toLocaleString()}</td>
+                    <td className="py-3 text-center space-x-4 text-sm font-semibold">
+                      <button onClick={() => openEdit(p)} className="text-blue-500 hover:text-blue-700 hover:underline transition-colors">Edit</button>
+                      <button onClick={() => del(p.id)} className="text-[#f03e3e] hover:text-red-700 hover:underline transition-colors">Delete</button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -185,22 +230,36 @@ export default function Products({ filters = {} }) {
           <input className={inputCls(errs.name)} placeholder="e.g. Steel Rods" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
         </FormField>
-        <FormField label="SKU / Code" error={errs.sku} required>
-          <input className={inputCls(errs.sku)} placeholder="e.g. STROD03" value={form.sku}
-            onChange={e => setForm(f => ({ ...f, sku: e.target.value.toUpperCase() }))} />
+        
+        <FormField label="Category" error={errs.category_id} required>
+          <select className={inputCls(errs.category_id)} value={form.category_id}
+            onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}>
+            <option value="">Select a category</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
         </FormField>
-        <FormField label="Category" error={errs.category} required>
-          <input className={inputCls(errs.category)} placeholder="e.g. Raw Material" value={form.category}
-            onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
+
+        <FormField label="Unit of Measure" error={errs.unit} required>
+          <select className={inputCls(errs.unit)} value={form.unit}
+            onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}>
+            <option value="">Select unit</option>
+            <option value="kg">Kilogram (kg)</option>
+            <option value="piece">Piece</option>
+            <option value="liter">Liter</option>
+            <option value="meter">Meter</option>
+          </select>
         </FormField>
+
         <div className="flex gap-3">
-          <FormField label="Qty" error={errs.qty} required>
-            <input className={inputCls(errs.qty)} type="number" min="0" placeholder="0" value={form.qty}
-              onChange={e => setForm(f => ({ ...f, qty: e.target.value }))} />
+          <FormField label="Cost Price (₹)" error={errs.cost} required>
+            <input className={inputCls(errs.cost)} type="number" min="0" step="0.01" placeholder="0.00" value={form.cost}
+              onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} />
           </FormField>
-          <FormField label="Unit of Measure" error={errs.uom} required>
-            <input className={inputCls(errs.uom)} placeholder="Units / Kg / Pcs" value={form.uom}
-              onChange={e => setForm(f => ({ ...f, uom: e.target.value }))} />
+          <FormField label="Selling Price (₹)" error={errs.price} required>
+            <input className={inputCls(errs.price)} type="number" min="0" step="0.01" placeholder="0.00" value={form.price}
+              onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
           </FormField>
         </div>
         <div className="flex gap-3 mt-2">

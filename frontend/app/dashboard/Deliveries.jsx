@@ -15,20 +15,23 @@ export default function Deliveries() {
   }, []);
 
   return (
-    <div className="flex flex-col justify-center rounded-2xl bg-white p-6 shadow-sm border border-gray-50 cursor-pointer hover:shadow-md transition-shadow h-full">
-      <h3 className="mb-3 text-[15px] font-semibold text-gray-900">Delivery</h3>
-      <div className="space-y-1.5">
+    <div className="flex flex-col justify-center rounded-2xl bg-white p-8 shadow-md border border-gray-100 cursor-pointer hover:shadow-lg transition-all h-full">
+      <h3 className="mb-4 text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <span className="inline-block w-1 h-6 bg-[#37b24d] rounded"></span>
+        Deliveries
+      </h3>
+      <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">{data.to_deliver} to deliver</span>
+          <span className="text-sm text-gray-600">{data.to_deliver} to deliver</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-[#f03e3e]">{data.late} Late</span>
+          <span className="text-sm font-semibold text-[#f03e3e]">{data.late} Late</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">{data.waiting} waiting</span>
+          <span className="text-sm text-gray-600">{data.waiting} waiting</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">{data.operations} operations</span>
+          <span className="text-sm text-gray-600">{data.operations} operations</span>
         </div>
       </div>
     </div>
