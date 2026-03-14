@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('sku');
             $table->foreignId('category_id')->references('id')->on('product_category')->cascadeOnDelete();
-            $table->string('unit');
+            $table->enum('unit', ['kg', 'piece', 'liter', 'meter']);
             $table->string('price');
             $table->string('cost');
             $table->timestamps();

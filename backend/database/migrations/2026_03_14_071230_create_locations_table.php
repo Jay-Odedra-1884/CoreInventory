@@ -14,8 +14,9 @@ return new class extends Migration
         Schema::create('locations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('code');
-            $table->foreignId('warehouse_id')->references('id')->on('warehouse')->cascadeOnDelete();
+            $table->string('code')->unique();
+            $table->string('warehouse_code');
+            $table->foreign('warehouse_code')->references('code')->on('warehouse')->cascadeOnDelete();
             $table->timestamps();
         });
     }
