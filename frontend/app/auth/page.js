@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -180,11 +181,13 @@ function LoginForm({ onSwitch }) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/login", {
+
+      apiFetch("/dashboard",{})
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({ login_id: loginId, password }),
       });
@@ -194,7 +197,7 @@ function LoginForm({ onSwitch }) {
       if (res.ok && data.success) {
         console.log("Login successful:", data);
         if (data.token) {
-          localStorage.setItem("token", data.token);
+         localStorage.setItem("authToken", data.token);
           router.push("/dashboard");
         }
       } else {
@@ -324,11 +327,11 @@ function SignupForm({ onSwitch }) {
     setApiErr("");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/register", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({ name, email, password }),
       });
